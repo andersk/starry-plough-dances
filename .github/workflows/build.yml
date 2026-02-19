@@ -1,0 +1,59 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.head_ref || github.run_id }}"
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: true
+      - uses: typstyle-rs/typstyle-action@637f310823ba2247602dda2bdb9b25e037885970
+        with:
+          opts: --inplace --wrap-text
+      - uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "Reformat with typstyle"
+      - uses: typst-community/setup-typst@v4
+        with:
+          typst-version: ^0.14.0
+      - name: Compile PDF
+        run: |
+          mkdir dist
+          typst compile starry-plough-dances.typ dist/starry-plough-dances.pdf
+      - name: Optimize PDF
+        run: |
+          curl -fLO https://github.com/pdfcpu/pdfcpu/releases/download/v0.11.1/pdfcpu_0.11.1_Linux_x86_64.tar.xz
+          tar -xf pdfcpu_0.11.1_Linux_x86_64.tar.xz
+          pdfcpu_0.11.1_Linux_x86_64/pdfcpu optimize dist/starry-plough-dances.pdf
+      - id: upload
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist/
+
+  deploy:
+    if: ${{ github.event_name == 'push' && github.repository == 'andersk/starry-plough-dances' && github.ref == 'refs/heads/main' }}
+    needs: build
+    runs-on: ubuntu-slim
+    permissions:
+      id-token: write
+      pages: write
+    environment:
+      name: github-pages
+      url: ${{ steps.upload.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
