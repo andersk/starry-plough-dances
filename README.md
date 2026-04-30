@@ -14,7 +14,7 @@ typst compile starry-plough-dances.typ
 ```
 
 Optional: to reduce the PDF file size by 65%, install
-[pdfcpu](https://pdfcpu.io/getting_started/install) and run
+[pdfcpu](https://pdfcpu.io/getting_started/install_cli/) and run
 
 ```shell
 pdfcpu optimize starry-plough-dances.pdf
